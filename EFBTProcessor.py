@@ -1,5 +1,7 @@
 from astropy.io import fits
 
+import matplotlib.pyplot as plt
+
 import os
 
 class EFBTProcessor:
@@ -40,9 +42,10 @@ class EFBTProcessor:
             y += real_coefficients[i-1] * z[i-1]
         return y
     
-    def open_graph_save_With_function_file(filepath, function_filepath):
-        hdul = fits.open(filepath) #open file
-        
+    def open_graph_save_With_function_file(self, filepath:str, function_filepath:str, show:bool=True, save:bool=False, saveFolderName:str = 'EFBTOBJCalibrados'):
+        # filepath tipicamente se corresponde con el path de un archivo 'EFBTOBJ...' o 'EFBTCOMP...'
+        # funtion_filepath tipicamente se corresponde con el path de un archivo 'idEFBT...'
+        hdul = fits.open(filepath)
         if('EFBTOBJ' in filepath):
             headers = hdul[0].header
             data = hdul[0].data[0][0]
@@ -51,7 +54,7 @@ class EFBTProcessor:
             headers = hdul[0].header
             data = hdul[0].data
         
-        # Extraer informacion de funcion a aplicar
+        # Extraer informacion de la funcion
         function_type:str
         function_order:int
         coefficients = []
@@ -71,21 +74,24 @@ class EFBTProcessor:
                         coefficients.append(float(words[0]))    
                 elif(reading_coefficients):
                     reading_coefficients=False             
-        # Segun el tipo de funcion calcula el arreglo de longitudes de onda de una hu otra forma
+        # Calcula el arreglo de longitudes de onda segun el tipo de funcion
         wav_arr = []
         if function_type == "legendre":
             for i in range(len(data)):
-                wav_arr.append(legendre(coefficients, i))
+                wav_arr.append(self._legendre(coefficients, i))
         else:
             raise ValueError(f"Ha aparecido un tipo de funcion desconosido: function_type={function_type}")
-        # Grafica
+        
         plt.figure()
         plt.plot(wav_arr, data, marker='', linestyle='-')
         plt.xlabel('Longitud de Onda (nm)')
         plt.ylabel('Val Pixel')
         plt.title('LongDeOndaXIntensidad')
         plt.grid(True)
-        #plt.show()
+        if(save):
+            None
+        if(show):
+            plt.show()
         
         # Guarda los resultados
         destiny_folder = 'Conjunto 2'

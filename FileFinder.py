@@ -20,8 +20,3 @@ class FileFinder:
                         filepaths[start].append(os.path.join(path, file))
                         break
         return filepaths
-    
-        # if self._match(file, ["EFBTOBJ", "EFBTCOMP"]):
-        #     filepaths.append(os.path.join(path, file))
-        # if self._match(file, ["idEFBTCOMP"]):
-        #     function_filepaths.append(os.path.join(path, file))

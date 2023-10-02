@@ -6,11 +6,6 @@ import os
 
 class EFBTProcessor:
     
-    files:list = []
-    
-    def __init__(self):
-        self.files = []
-    
     def _legendre(self, coefficients:list, x:float) -> float:
         # coefficients:
         #   0 <- Cantidad de numeros a continuacion
@@ -42,19 +37,7 @@ class EFBTProcessor:
             y += real_coefficients[i-1] * z[i-1]
         return y
     
-    def open_graph_save_With_function_file(self, filepath:str, function_filepath:str, show:bool=True, save:bool=False, saveFolderName:str = 'EFBTOBJCalibrados'):
-        # filepath tipicamente se corresponde con el path de un archivo 'EFBTOBJ...' o 'EFBTCOMP...'
-        # funtion_filepath tipicamente se corresponde con el path de un archivo 'idEFBT...'
-        hdul = fits.open(filepath)
-        if('EFBTOBJ' in filepath):
-            headers = hdul[0].header
-            data = hdul[0].data[0][0]
-        else: # Se trata de un archivo 'EFBTCOMP..' con informacion de 
-            # la lampara de comparacion
-            headers = hdul[0].header
-            data = hdul[0].data
-        
-        # Extraer informacion de la funcion
+    def _extract_function_data(self, function_filepath:str) -> (list, str, int):
         function_type:str
         function_order:int
         coefficients = []
@@ -73,7 +56,24 @@ class EFBTProcessor:
                     elif(reading_coefficients):
                         coefficients.append(float(words[0]))    
                 elif(reading_coefficients):
-                    reading_coefficients=False             
+                    reading_coefficients=False
+        return coefficients, function_type, function_order
+    
+    def open_graph_save_With_function_file(self, filepath:str, function_filepath:str, show:bool=True, save:bool=False, saveFolderName:str = 'EFBTOBJCalibrados', plot_comands = True):
+        # filepath tipicamente se corresponde con el path de un archivo 'EFBTOBJ...' o 'EFBTCOMP...'
+        # funtion_filepath tipicamente se corresponde con el path de un archivo 'idEFBT...'
+        hdul = fits.open(filepath)
+        if('EFBTOBJ' in filepath):
+            headers = hdul[0].header
+            data = hdul[0].data[0][0]
+        else: # Se trata de un archivo 'EFBTCOMP..' con informacion de 
+            # la lampara de comparacion
+            headers = hdul[0].header
+            data = hdul[0].data
+        
+        # Extraer informacion de la funcion
+        coefficients, function_type, _ = self._extract_function_data(function_filepath=function_filepath)
+        
         # Calcula el arreglo de longitudes de onda segun el tipo de funcion
         wav_arr = []
         if function_type == "legendre":
@@ -82,25 +82,23 @@ class EFBTProcessor:
         else:
             raise ValueError(f"Ha aparecido un tipo de funcion desconosido: function_type={function_type}")
         
-        plt.figure()
+        # Generar grafico
+        if (plot_comands):
+            plt.figure()
+            plt.xlabel('Longitud de Onda (nm)')
+            plt.ylabel('Val Pixel')
+            plt.title('LongDeOndaXIntensidad')
+            plt.grid(True)
         plt.plot(wav_arr, data, marker='', linestyle='-')
-        plt.xlabel('Longitud de Onda (nm)')
-        plt.ylabel('Val Pixel')
-        plt.title('LongDeOndaXIntensidad')
-        plt.grid(True)
         if(save):
-            None
+            if not os.path.exists(saveFolderName):
+                os.makedirs(saveFolderName)
+            full_folder_path, filename = os.path.split(filepath)
+            _, folder_name = os.path.split(full_folder_path)
+            new_path = os.path.join(saveFolderName, f"{folder_name}_{filename}")
+            new_path, _ = os.path.splitext(new_path)
+            plt.savefig(new_path+'.png')
+            plt.close()
+            hdul.close()
         if(show):
             plt.show()
-        
-        # Guarda los resultados
-        destiny_folder = 'Conjunto 2'
-        if not os.path.exists(destiny_folder):
-            os.makedirs(destiny_folder)
-        full_folder_path, filename = os.path.split(filepath)
-        _, folder_name = os.path.split(full_folder_path)
-        new_path = os.path.join(destiny_folder, f"{folder_name}_{filename}")
-        new_path, _ = os.path.splitext(new_path)
-        plt.savefig(new_path+'.png')
-        plt.close()
-        hdul.close()
